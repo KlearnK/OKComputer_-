@@ -1,57 +1,182 @@
-// 年度目标类型
+// 年度目标类型 - 同时支持新旧两种结构
 export interface AnnualGoal {
   id: string;
+  memberId?: string; // 可选，团队层面可能为空
   year: number;
-  income: number; // 年收入目标
-  level: string; // 级别目标
-  orderCount: number; // 单量目标
-  retailVolume: number; // 零售量目标
-  travelGoal: string; // 旅游目标
+  
+  // 新结构：嵌套对象
+  breakdownGoals?: {
+    income: number;
+    level: string;
+    orderCount: number;
+    retailVolume: number;
+    travelGoal: string;
+  };
+  
+  executionGoals?: {
+    newLeads: number;
+    visitCount: number;
+    new5ALeads: number;
+    visit5ACount: number;
+    salonInviteCount: number;
+    引流CardCount: number;
+  };
+  
+  // 旧结构：扁平字段（兼容现有代码）
+  income?: number;
+  level?: string;
+  orderCount?: number;
+  retailVolume?: number;
+  travelGoal?: string;
+  
+  // 实际完成数据 - 新结构
+  actualBreakdown?: {
+    income?: number;
+    orderCount?: number;
+    retailVolume?: number;
+  };
+  
+  actualExecution?: {
+    newLeads?: number;
+    visitCount?: number;
+    new5ALeads?: number;
+    visit5ACount?: number;
+    salonInviteCount?: number;
+    引流CardCount?: number;
+  };
+  
+  // 实际完成数据 - 旧结构（兼容现有代码）
+  actualIncome?: number;
+  actualOrderCount?: number;
+  actualRetailVolume?: number;
+  
   createdAt: string;
   updatedAt: string;
 }
 
-// 月度目标类型
+// 月度目标类型 - 同时支持新旧两种结构
 export interface MonthlyGoal {
   id: string;
   annualGoalId: string;
   year: number;
-  month: number; // 1-12
-  monthISO: string; // ISO8601格式: YYYY-MM
-  income: number;
-  level: string;
-  orderCount: number;
-  retailVolume: number;
-  travelGoal: string;
+  month: number;
+  monthISO: string;
+  
+  // 新结构
+  breakdownGoals?: {
+    income: number;
+    level: string;
+    orderCount: number;
+    retailVolume: number;
+    travelGoal: string;
+  };
+  
+  executionGoals?: {
+    newLeads: number;
+    visitCount: number;
+    new5ALeads: number;
+    visit5ACount: number;
+    salonInviteCount: number;
+    引流CardCount: number;
+  };
+  
+  // 旧结构（兼容现有代码）
+  income?: number;
+  level?: string;
+  orderCount?: number;
+  retailVolume?: number;
+  travelGoal?: string;
+  
+  // 实际完成 - 新结构
+  actualBreakdown?: {
+    income?: number;
+    level?: string;
+    orderCount?: number;
+    retailVolume?: number;
+    travelGoal?: string;
+  };
+  
+  actualExecution?: {
+    newLeads?: number;
+    visitCount?: number;
+    new5ALeads?: number;
+    visit5ACount?: number;
+    salonInviteCount?: number;
+    引流CardCount?: number;
+  };
+  
+  // 实际完成 - 旧结构（兼容现有代码）
   actualIncome?: number;
   actualLevel?: string;
   actualOrderCount?: number;
   actualRetailVolume?: number;
   actualTravelGoal?: string;
+  
   createdAt: string;
   updatedAt: string;
 }
 
-// 周目标类型
+// 周目标类型 - 同时支持新旧两种结构
 export interface WeeklyGoal {
   id: string;
   monthlyGoalId: string;
   year: number;
   month: number;
-  week: number; // ISO8601周数 1-53
-  weekISO: string; // ISO8601格式: YYYY-Www
-  weekStartDate: string; // 周开始日期
-  weekEndDate: string; // 周结束日期
-  income: number;
-  level: string;
-  orderCount: number;
-  retailVolume: number;
-  travelGoal: string;
+  week: number;
+  weekISO: string;
+  weekStartDate: string;
+  weekEndDate: string;
+  
+  // 新结构
+  breakdownGoals?: {
+    income: number;
+    level: string;
+    orderCount: number;
+    retailVolume: number;
+    travelGoal: string;
+  };
+  
+  executionGoals?: {
+    newLeads: number;
+    visitCount: number;
+    new5ALeads: number;
+    visit5ACount: number;
+    salonInviteCount: number;
+    引流CardCount: number;
+  };
+  
+  // 旧结构（兼容现有代码）
+  income?: number;
+  level?: string;
+  orderCount?: number;
+  retailVolume?: number;
+  travelGoal?: string;
+  
+  // 实际完成 - 新结构
+  actualBreakdown?: {
+    income?: number;
+    level?: string;
+    orderCount?: number;
+    retailVolume?: number;
+    travelGoal?: string;
+  };
+  
+  actualExecution?: {
+    newLeads?: number;
+    visitCount?: number;
+    new5ALeads?: number;
+    visit5ACount?: number;
+    salonInviteCount?: number;
+    引流CardCount?: number;
+  };
+  
+  // 实际完成 - 旧结构（兼容现有代码）
   actualIncome?: number;
   actualLevel?: string;
   actualOrderCount?: number;
   actualRetailVolume?: number;
   actualTravelGoal?: string;
+  
   createdAt: string;
   updatedAt: string;
 }

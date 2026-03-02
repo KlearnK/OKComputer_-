@@ -9,8 +9,10 @@ import { TeamMemberDetail } from '@/sections/TeamMemberDetail';
 import { TeamDashboard } from '@/sections/TeamDashboard';
 import { TeamSharePanel } from '@/sections/TeamSharePanel';
 import { DebugPanel } from '@/sections/DebugPanel';
+import { AnnualGoalList } from '@/sections/AnnualGoalList';
 import { exportTeamDataToExcel } from '@/utils/exportUtils';
 import type { TeamMember, TeamMemberAnnualGoal } from '@/types/team';
+import type { AnnualGoal } from '@/types/goals';
 import { 
   Users, 
   LayoutDashboard,
@@ -24,7 +26,8 @@ import {
   RefreshCw,
   CheckCircle2,
   Bug,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,7 +36,7 @@ import { Label } from '@/components/ui/label';
 import './App.css';
 
 // 扩展现有的标签类型
-type TabType = 'dashboard' | 'team' | 'member-detail';
+type TabType = 'dashboard' | 'team' | 'annual-goals' | 'member-detail';
 
 // ==================== 外层包装组件 ====================
 function App() {
@@ -150,11 +153,11 @@ function AppContent() {
   };
 
   // 处理编辑目标
-  const handleEditGoal = (goal: TeamMemberAnnualGoal) => {
-    setEditingGoal(goal);
-    setSelectedMemberIdForGoal(goal.memberId);
-    setShowGoalForm(true);
-  };
+const handleEditGoal = (goal: TeamMemberAnnualGoal | AnnualGoal) => {
+  setEditingGoal(goal as TeamMemberAnnualGoal);
+  setSelectedMemberIdForGoal((goal as any).memberId || '');
+  setShowGoalForm(true);
+};
 
   // 处理创建目标
   const handleCreateGoal = (memberId: string) => {
@@ -285,6 +288,17 @@ function AppContent() {
       default:
         return null;
     }
+  };
+
+  // 辅助函数：获取月度目标数量
+  const getMonthlyGoalsCount = (annualGoalId: string) => {
+    return monthlyGoals.filter(g => g.annualGoalId === annualGoalId).length;
+  };
+
+  // 辅助函数：获取周目标数量
+  const getWeeklyGoalsCount = (annualGoalId: string) => {
+    const monthlyIds = monthlyGoals.filter(g => g.annualGoalId === annualGoalId).map(g => g.id);
+    return weeklyGoals.filter(g => monthlyIds.includes(g.monthlyGoalId)).length;
   };
 
   // ==================== 有团队码，显示主应用 ====================
@@ -495,6 +509,56 @@ function AppContent() {
           </div>
         )}
 
+        {/* Annual Goals Tab */}
+        {activeTab === 'annual-goals' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-full mb-4">
+                <Calendar className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-medium text-indigo-700">年度目标管理</span>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">年度目标列表</h2>
+              <p className="text-slate-500 max-w-2xl mx-auto">
+                查看和管理所有年度目标，更新实际完成情况，追踪拆解类和执行类目标的进度
+              </p>
+            </div>
+            
+            <AnnualGoalList
+              goals={annualGoals.map(g => ({
+                ...g,
+                breakdownGoals: g.breakdownGoals || {
+                  income: 0,
+                  level: '',
+                  orderCount: 0,
+                  retailVolume: 0,
+                  travelGoal: '',
+                },
+                executionGoals: g.executionGoals || {
+                  newLeads: 0,
+                  visitCount: 0,
+                  new5ALeads: 0,
+                  visit5ACount: 0,
+                  salonInviteCount: 0,
+                  引流CardCount: 0,
+                },
+              }))}
+              onEdit={handleEditGoal}
+              onDelete={handleDeleteGoal}
+              onSelectGoal={(goal) => {
+                // 找到对应的成员并跳转到成员详情
+                const member = members.find(m => m.id === goal.memberId);
+                if (member) {
+                  setSelectedMember(member);
+                  setActiveTab('member-detail');
+                }
+              }}
+              onUpdateActual={handleUpdateAnnualActual}
+              monthlyGoalsCount={getMonthlyGoalsCount}
+              weeklyGoalsCount={getWeeklyGoalsCount}
+            />
+          </div>
+        )}
+
         {/* Member Detail Tab */}
         {activeTab === 'member-detail' && selectedMember && (
           <div className="animate-fade-in">
@@ -591,6 +655,7 @@ const TeamTabNavigation = ({
   const tabs = [
     { id: 'dashboard', label: '团队看板', icon: LayoutDashboard },
     { id: 'team', label: '团队管理', icon: Users },
+    { id: 'annual-goals', label: '年度目标', icon: Calendar },
   ];
 
   return (

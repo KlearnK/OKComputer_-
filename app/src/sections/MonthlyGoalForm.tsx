@@ -45,11 +45,11 @@ export const MonthlyGoalForm = ({
         year: editingGoal.year,
         month: editingGoal.month,
         monthISO: editingGoal.monthISO,
-        income: editingGoal.income,
-        level: editingGoal.level,
-        orderCount: editingGoal.orderCount,
-        retailVolume: editingGoal.retailVolume,
-        travelGoal: editingGoal.travelGoal,
+        income: editingGoal.income || 0,
+        level: editingGoal.level || '',
+        orderCount: editingGoal.orderCount || 0,
+        retailVolume: editingGoal.retailVolume || 0,
+        travelGoal: editingGoal.travelGoal || '',
       });
     } else if (selectedAnnualId) {
       setFormData(prev => ({ ...prev, annualGoalId: selectedAnnualId }));

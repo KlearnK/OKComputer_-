@@ -44,7 +44,7 @@ export const MonthlyGoalList = ({
   };
 
   const calculateProgress = (goal: MonthlyGoal) => {
-    const targetSum = goal.income + goal.orderCount + goal.retailVolume;
+    const targetSum = (goal.income || 0) + (goal.orderCount || 0) + (goal.retailVolume || 0);
     const actualSum = (goal.actualIncome || 0) + (goal.actualOrderCount || 0) + (goal.actualRetailVolume || 0);
     return targetSum > 0 ? Math.min((actualSum / targetSum) * 100, 100) : 0;
   };
@@ -126,7 +126,7 @@ export const MonthlyGoalList = ({
                         <span className="text-xs text-green-700 font-medium">收入</span>
                       </div>
                       <p className="text-sm font-semibold text-green-600">
-                        ¥{goal.income.toLocaleString()}
+                        ¥{(goal.income || 0).toLocaleString()}
                       </p>
                       {goal.actualIncome !== undefined && (
                         <p className="text-xs text-green-500 mt-1">
@@ -151,7 +151,7 @@ export const MonthlyGoalList = ({
                         <span className="text-xs text-blue-700 font-medium">单量</span>
                       </div>
                       <p className="text-sm font-semibold text-blue-600">
-                        {goal.orderCount.toLocaleString()}
+                        {(goal.orderCount || 0).toLocaleString()}
                       </p>
                       {goal.actualOrderCount !== undefined && (
                         <p className="text-xs text-blue-500 mt-1">
@@ -166,7 +166,7 @@ export const MonthlyGoalList = ({
                         <span className="text-xs text-purple-700 font-medium">零售量</span>
                       </div>
                       <p className="text-sm font-semibold text-purple-600">
-                        {goal.retailVolume.toLocaleString()}
+                        {(goal.retailVolume || 0).toLocaleString()}
                       </p>
                       {goal.actualRetailVolume !== undefined && (
                         <p className="text-xs text-purple-500 mt-1">
@@ -230,15 +230,15 @@ export const MonthlyGoalList = ({
                     </div>
                     <div className="bg-white rounded-lg p-3 shadow-sm text-center">
                       <p className="text-xs text-slate-500 mb-1">收入</p>
-                      <p className="font-semibold text-green-600">¥{goal.income.toLocaleString()}</p>
+                      <p className="font-semibold text-green-600">¥{(goal.income || 0).toLocaleString()}</p>
                     </div>
                     <div className="bg-white rounded-lg p-3 shadow-sm text-center">
                       <p className="text-xs text-slate-500 mb-1">单量</p>
-                      <p className="font-semibold text-blue-600">{goal.orderCount}</p>
+                      <p className="font-semibold text-blue-600">{goal.orderCount || 0}</p>
                     </div>
                     <div className="bg-white rounded-lg p-3 shadow-sm text-center">
                       <p className="text-xs text-slate-500 mb-1">零售量</p>
-                      <p className="font-semibold text-purple-600">{goal.retailVolume}</p>
+                      <p className="font-semibold text-purple-600">{goal.retailVolume || 0}</p>
                     </div>
                     <div className="bg-white rounded-lg p-3 shadow-sm text-center">
                       <p className="text-xs text-slate-500 mb-1">进度</p>

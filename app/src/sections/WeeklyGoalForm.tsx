@@ -51,11 +51,11 @@ export const WeeklyGoalForm = ({
         weekISO: editingGoal.weekISO,
         weekStartDate: editingGoal.weekStartDate,
         weekEndDate: editingGoal.weekEndDate,
-        income: editingGoal.income,
-        level: editingGoal.level,
-        orderCount: editingGoal.orderCount,
-        retailVolume: editingGoal.retailVolume,
-        travelGoal: editingGoal.travelGoal,
+        income: editingGoal.income || 0,
+        level: editingGoal.level || '',
+        orderCount: editingGoal.orderCount || 0,
+        retailVolume: editingGoal.retailVolume || 0,
+        travelGoal: editingGoal.travelGoal || '',
       });
     } else if (selectedMonthlyId) {
       setFormData(prev => ({ ...prev, monthlyGoalId: selectedMonthlyId }));

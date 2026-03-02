@@ -153,14 +153,14 @@ export const useGoals = () => {
 
     const totalMonthly = monthlyGoals.length;
     const completedMonthly = monthlyGoals.filter(g => {
-      const targetSum = g.income + g.orderCount + g.retailVolume;
+      const targetSum = (g.income || 0) + (g.orderCount || 0) + (g.retailVolume || 0);
       const actualSum = (g.actualIncome || 0) + (g.actualOrderCount || 0) + (g.actualRetailVolume || 0);
       return actualSum >= targetSum;
     }).length;
 
     const totalWeekly = weeklyGoals.length;
     const completedWeekly = weeklyGoals.filter(g => {
-      const targetSum = g.income + g.orderCount + g.retailVolume;
+      const targetSum = (g.income || 0) + (g.orderCount || 0) + (g.retailVolume || 0);
       const actualSum = (g.actualIncome || 0) + (g.actualOrderCount || 0) + (g.actualRetailVolume || 0);
       return actualSum >= targetSum;
     }).length;

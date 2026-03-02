@@ -28,11 +28,11 @@ export const AnnualGoalForm = ({ onSubmit, editingGoal, onCancel }: AnnualGoalFo
     if (editingGoal) {
       setFormData({
         year: editingGoal.year,
-        income: editingGoal.income,
-        level: editingGoal.level,
-        orderCount: editingGoal.orderCount,
-        retailVolume: editingGoal.retailVolume,
-        travelGoal: editingGoal.travelGoal,
+        income: editingGoal.income || 0,
+        level: editingGoal.level || '',
+        orderCount: editingGoal.orderCount || 0,
+        retailVolume: editingGoal.retailVolume || 0,
+        travelGoal: editingGoal.travelGoal || '',
       });
     } else {
       setFormData({
