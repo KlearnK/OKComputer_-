@@ -1,0 +1,264 @@
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import type { TeamMemberMonthlyGoal, TeamMemberWeeklyGoal } from '@/types/team';
+import { Target, Users, TrendingUp } from 'lucide-react';
+
+interface ActualUpdateModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (actualBreakdown: any, actualExecution: any) => void;
+  goal: TeamMemberMonthlyGoal | TeamMemberWeeklyGoal | null;
+  type: 'monthly' | 'weekly';
+}
+
+export const ActualUpdateModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  goal,
+  type,
+}: ActualUpdateModalProps) => {
+  const [actualBreakdown, setActualBreakdown] = useState({
+    income: '',
+    orderCount: '',
+    retailVolume: '',
+  });
+  const [actualExecution, setActualExecution] = useState({
+    newLeads: '',
+    visitCount: '',
+    new5ALeads: '',
+    visit5ACount: '',
+    salonInviteCount: '',
+    引流CardCount: '',
+  });
+
+  // 当goal变化时，加载现有的实际完成数据
+  useEffect(() => {
+    if (goal) {
+      setActualBreakdown({
+        income: goal.actualBreakdown?.income?.toString() || '',
+        orderCount: goal.actualBreakdown?.orderCount?.toString() || '',
+        retailVolume: goal.actualBreakdown?.retailVolume?.toString() || '',
+      });
+      setActualExecution({
+        newLeads: goal.actualExecution?.newLeads?.toString() || '',
+        visitCount: goal.actualExecution?.visitCount?.toString() || '',
+        new5ALeads: goal.actualExecution?.new5ALeads?.toString() || '',
+        visit5ACount: goal.actualExecution?.visit5ACount?.toString() || '',
+        salonInviteCount: goal.actualExecution?.salonInviteCount?.toString() || '',
+        引流CardCount: goal.actualExecution?.引流CardCount?.toString() || '',
+      });
+    }
+  }, [goal]);
+
+  const handleSubmit = () => {
+    const breakdownData = {
+      income: parseInt(actualBreakdown.income) || 0,
+      orderCount: parseInt(actualBreakdown.orderCount) || 0,
+      retailVolume: parseInt(actualBreakdown.retailVolume) || 0,
+    };
+    const executionData = {
+      newLeads: parseInt(actualExecution.newLeads) || 0,
+      visitCount: parseInt(actualExecution.visitCount) || 0,
+      new5ALeads: parseInt(actualExecution.new5ALeads) || 0,
+      visit5ACount: parseInt(actualExecution.visit5ACount) || 0,
+      salonInviteCount: parseInt(actualExecution.salonInviteCount) || 0,
+      引流CardCount: parseInt(actualExecution.引流CardCount) || 0,
+    };
+    onSubmit(breakdownData, executionData);
+    onClose();
+  };
+
+  if (!goal) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-indigo-600" />
+            更新{type === 'monthly' ? '月度' : '周别'}实际完成数据
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          {/* 拆解类实际完成 */}
+          <div className="space-y-4 p-4 bg-indigo-50/30 rounded-lg">
+            <h3 className="font-medium text-slate-800 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-indigo-600" />
+              拆解类目标 - 实际完成
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium text-slate-700">实际收入 (¥)</Label>
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    计划: ¥{(goal.breakdownGoals?.income ?? 0).toLocaleString()}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="实际收入"
+                  value={actualBreakdown.income}
+                  onChange={(e) => setActualBreakdown(prev => ({ ...prev, income: e.target.value }))}
+                  className="border-slate-200"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium text-slate-700">实际单量</Label>
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    计划: {goal.breakdownGoals?.orderCount ?? 0}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="实际单量"
+                  value={actualBreakdown.orderCount}
+                  onChange={(e) => setActualBreakdown(prev => ({ ...prev, orderCount: e.target.value }))}
+                  className="border-slate-200"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium text-slate-700">实际零售量</Label>
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    计划: {goal.breakdownGoals?.retailVolume ?? 0}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="实际零售量"
+                  value={actualBreakdown.retailVolume}
+                  onChange={(e) => setActualBreakdown(prev => ({ ...prev, retailVolume: e.target.value }))}
+                  className="border-slate-200"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 执行类实际完成 */}
+          <div className="space-y-4 p-4 bg-green-50/30 rounded-lg">
+            <h3 className="font-medium text-slate-800 flex items-center gap-2">
+              <Users className="w-4 h-4 text-green-600" />
+              执行类目标 - 实际完成
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium text-slate-700">新增名单（个）</Label>
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    计划: {goal.executionGoals?.newLeads ?? 0}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="实际新增名单数"
+                  value={actualExecution.newLeads}
+                  onChange={(e) => setActualExecution(prev => ({ ...prev, newLeads: e.target.value }))}
+                  className="border-slate-200"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium text-slate-700">拜访人次（次）</Label>
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    计划: {goal.executionGoals?.visitCount ?? 0}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="实际拜访人次"
+                  value={actualExecution.visitCount}
+                  onChange={(e) => setActualExecution(prev => ({ ...prev, visitCount: e.target.value }))}
+                  className="border-slate-200"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium text-slate-700">新增5A名单（个）</Label>
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    计划: {goal.executionGoals?.new5ALeads ?? 0}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="实际新增5A名单"
+                  value={actualExecution.new5ALeads}
+                  onChange={(e) => setActualExecution(prev => ({ ...prev, new5ALeads: e.target.value }))}
+                  className="border-slate-200"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium text-slate-700">拜访5A人次（次）</Label>
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    计划: {goal.executionGoals?.visit5ACount ?? 0}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="实际拜访5A人次"
+                  value={actualExecution.visit5ACount}
+                  onChange={(e) => setActualExecution(prev => ({ ...prev, visit5ACount: e.target.value }))}
+                  className="border-slate-200"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium text-slate-700">邀约沙龙/会所人次（次）</Label>
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    计划: {goal.executionGoals?.salonInviteCount ?? 0}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="实际邀约人次"
+                  value={actualExecution.salonInviteCount}
+                  onChange={(e) => setActualExecution(prev => ({ ...prev, salonInviteCount: e.target.value }))}
+                  className="border-slate-200"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium text-slate-700">引流卡量（张）</Label>
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    计划: {goal.executionGoals?.引流CardCount ?? 0}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="实际引流卡量"
+                  value={actualExecution.引流CardCount}
+                  onChange={(e) => setActualExecution(prev => ({ ...prev, 引流CardCount: e.target.value }))}
+                  className="border-slate-200"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            取消
+          </Button>
+          <Button onClick={handleSubmit} className="bg-indigo-600 hover:bg-indigo-700">
+            保存
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

@@ -1,0 +1,24 @@
+{
+  "envId": "teamgoals2026-6gsfpijvc28bca0a",
+  "version": "2.0",
+  "$schema": "https://framework-1258016615.tcloudbaseapp.com/schema/latest.json",
+  "functionRoot": "./functions",
+  "functions": [],
+  "region": "ap-shanghai",
+  "framework": {
+    "name": "team-goals-v23",
+    "plugins": {
+      "client": {
+        "use": "@cloudbase/framework-plugin-website",
+        "inputs": {
+          "buildCommand": "npm run build",
+          "outputPath": "dist",
+          "cloudPath": "/",
+          "envVariables": {
+            "NODE_ENV": "production"
+          }
+        }
+      }
+    }
+  }
+}

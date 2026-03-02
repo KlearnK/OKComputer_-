@@ -1,0 +1,905 @@
+import { useState, useRef } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import type { 
+  TeamMember, 
+  TeamMemberAnnualGoal, 
+  TeamMemberMonthlyGoal, 
+  TeamMemberWeeklyGoal 
+} from '@/types/team';
+import type { MemberProgress } from '@/types/team';
+import { 
+  Target, 
+  Calendar, 
+  CalendarDays,
+  Users,
+  ArrowLeft,
+  Edit3,
+  Plus,
+  Trash2,
+  Award,
+  BookOpen,
+  Heart,
+  Sparkles,
+  TrendingUp,
+  Download
+} from 'lucide-react';
+import { getMonthDisplayName } from '@/utils/dateUtils';
+import { format } from 'date-fns';
+import { ActualUpdateModal } from './ActualUpdateModal';
+import { GoalSettingModal } from './GoalSettingModal';
+import { ProgressChart, type ProgressChartRef } from './ProgressChart';
+
+interface TeamMemberDetailProps {
+  member: TeamMember;
+  progress: MemberProgress;
+  annualGoals: TeamMemberAnnualGoal[];
+  monthlyGoals: TeamMemberMonthlyGoal[];
+  weeklyGoals: TeamMemberWeeklyGoal[];
+  onUpdateMonthlyActual: (id: string, actualBreakdown: any, actualExecution: any) => void;
+  onUpdateWeeklyActual: (id: string, actualBreakdown: any, actualExecution: any) => void;
+  onUpdateAnnualActual?: (id: string, actualBreakdown: any, actualExecution: any) => void;
+  onUpdateMonthlyGoal?: (id: string, breakdownGoals: any, executionGoals: any) => void;
+  onUpdateWeeklyGoal?: (id: string, breakdownGoals: any, executionGoals: any) => void;
+  onCreateMonthlyGoal?: (memberId: string, year: number, month: number, monthISO: string, breakdownGoals: any, executionGoals: any) => void;
+  onCreateWeeklyGoal?: (memberId: string, year: number, month: number, week: number, weekISO: string, weekStartDate: string, weekEndDate: string, breakdownGoals: any, executionGoals: any) => void;
+  onDeleteMonthlyGoal?: (id: string) => void;
+  onDeleteWeeklyGoal?: (id: string) => void;
+  onBack: () => void;
+}
+
+// 计算拆解进度
+const calculateBreakdownProgress = (goal: { breakdownGoals: { income: number; orderCount: number; retailVolume: number }; actualBreakdown?: { income?: number; orderCount?: number; retailVolume?: number } }) => {
+  const target = goal.breakdownGoals.income + goal.breakdownGoals.orderCount + goal.breakdownGoals.retailVolume;
+  const actual = (goal.actualBreakdown?.income || 0) + (goal.actualBreakdown?.orderCount || 0) + (goal.actualBreakdown?.retailVolume || 0);
+  return target > 0 ? Math.min((actual / target) * 100, 100) : 0;
+};
+
+// 计算执行进度
+const calculateExecutionProgress = (goal: { executionGoals: { newLeads: number; visitCount: number; new5ALeads: number; visit5ACount: number; salonInviteCount: number; 引流CardCount: number }; actualExecution?: { newLeads?: number; visitCount?: number; new5ALeads?: number; visit5ACount?: number; salonInviteCount?: number; 引流CardCount?: number } }) => {
+  const target = goal.executionGoals.newLeads + goal.executionGoals.visitCount + goal.executionGoals.new5ALeads + 
+                 goal.executionGoals.visit5ACount + goal.executionGoals.salonInviteCount + goal.executionGoals.引流CardCount;
+  const actual = (goal.actualExecution?.newLeads || 0) + (goal.actualExecution?.visitCount || 0) + 
+                 (goal.actualExecution?.new5ALeads || 0) + (goal.actualExecution?.visit5ACount || 0) +
+                 (goal.actualExecution?.salonInviteCount || 0) + (goal.actualExecution?.引流CardCount || 0);
+  return target > 0 ? Math.min((actual / target) * 100, 100) : 0;
+};
+
+export const TeamMemberDetail = ({
+  member,
+  progress,
+  annualGoals,
+  monthlyGoals,
+  weeklyGoals,
+  onUpdateMonthlyActual,
+  onUpdateWeeklyActual,
+  onUpdateAnnualActual,
+  onUpdateMonthlyGoal,
+  onUpdateWeeklyGoal,
+  onCreateMonthlyGoal,
+  onCreateWeeklyGoal,
+  onDeleteMonthlyGoal,
+  onDeleteWeeklyGoal,
+  onBack,
+}: TeamMemberDetailProps) => {
+  const [activeTab, setActiveTab] = useState<'annual' | 'monthly' | 'weekly'>('annual');
+  const [isActualModalOpen, setIsActualModalOpen] = useState(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [isCreateGoalModalOpen, setIsCreateGoalModalOpen] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<TeamMemberMonthlyGoal | TeamMemberWeeklyGoal | TeamMemberAnnualGoal | null>(null);
+  const [modalType, setModalType] = useState<'annual' | 'monthly' | 'weekly'>('monthly');
+  const [createModalMode, setCreateModalMode] = useState<'monthly' | 'weekly'>('monthly');
+  const chartRef = useRef<ProgressChartRef>(null);
+
+  const getInitials = (name: string) => {
+    return name.charAt(0).toUpperCase();
+  };
+
+  const handleOpenMonthlyActual = (goal: TeamMemberMonthlyGoal) => {
+    setSelectedGoal(goal);
+    setModalType('monthly');
+    setIsActualModalOpen(true);
+  };
+
+  const handleOpenWeeklyActual = (goal: TeamMemberWeeklyGoal) => {
+    setSelectedGoal(goal);
+    setModalType('weekly');
+    setIsActualModalOpen(true);
+  };
+
+  const handleOpenMonthlyGoal = (goal: TeamMemberMonthlyGoal) => {
+    setSelectedGoal(goal);
+    setModalType('monthly');
+    setIsGoalModalOpen(true);
+  };
+
+  const handleOpenWeeklyGoal = (goal: TeamMemberWeeklyGoal) => {
+    setSelectedGoal(goal);
+    setModalType('weekly');
+    setIsGoalModalOpen(true);
+  };
+
+  const handleOpenAnnualActual = (goal: TeamMemberAnnualGoal) => {
+    setSelectedGoal(goal);
+    setModalType('annual');
+    setIsActualModalOpen(true);
+  };
+
+  const handleDeleteMonthlyGoal = (id: string) => {
+    if (onDeleteMonthlyGoal && window.confirm('确定要删除这个月度目标吗？')) {
+      onDeleteMonthlyGoal(id);
+    }
+  };
+
+  const handleDeleteWeeklyGoal = (id: string) => {
+    if (onDeleteWeeklyGoal && window.confirm('确定要删除这个周目标吗？')) {
+      onDeleteWeeklyGoal(id);
+    }
+  };
+
+  const handleOpenCreateMonthlyGoal = () => {
+    setSelectedGoal(null);
+    setCreateModalMode('monthly');
+    setIsCreateGoalModalOpen(true);
+  };
+
+  const handleOpenCreateWeeklyGoal = () => {
+    setSelectedGoal(null);
+    setCreateModalMode('weekly');
+    setIsCreateGoalModalOpen(true);
+  };
+
+  const handleCreateGoal = (data: any) => {
+    if (createModalMode === 'monthly' && onCreateMonthlyGoal) {
+      onCreateMonthlyGoal(
+        member.id, 
+        data.year, 
+        data.month, 
+        data.monthISO, 
+        data.breakdownGoals, 
+        data.executionGoals
+      );
+    } else if (createModalMode === 'weekly' && onCreateWeeklyGoal) {
+      onCreateWeeklyGoal(
+        member.id, 
+        data.year, 
+        1, // month is not used for weekly
+        data.week, 
+        data.weekISO, 
+        data.weekStartDate, 
+        data.weekEndDate, 
+        data.breakdownGoals, 
+        data.executionGoals
+      );
+    }
+    setIsCreateGoalModalOpen(false);
+  };
+
+  const handleUpdateGoal = (data: any) => {
+    if (!selectedGoal) return;
+    
+    if (modalType === 'monthly' && onUpdateMonthlyGoal) {
+      onUpdateMonthlyGoal((selectedGoal as TeamMemberMonthlyGoal).id, data.breakdownGoals, data.executionGoals);
+    } else if (modalType === 'weekly' && onUpdateWeeklyGoal) {
+      onUpdateWeeklyGoal((selectedGoal as TeamMemberWeeklyGoal).id, data.breakdownGoals, data.executionGoals);
+    }
+    setIsGoalModalOpen(false);
+    setSelectedGoal(null);
+  };
+
+  const handleUpdateActual = (actualBreakdown: any, actualExecution: any) => {
+    if (!selectedGoal) return;
+    
+    if (modalType === 'annual' && onUpdateAnnualActual) {
+      onUpdateAnnualActual((selectedGoal as TeamMemberAnnualGoal).id, actualBreakdown, actualExecution);
+    } else if (modalType === 'monthly') {
+      onUpdateMonthlyActual((selectedGoal as TeamMemberMonthlyGoal).id, actualBreakdown, actualExecution);
+    } else {
+      onUpdateWeeklyActual((selectedGoal as TeamMemberWeeklyGoal).id, actualBreakdown, actualExecution);
+    }
+    setIsActualModalOpen(false);
+    setSelectedGoal(null);
+  };
+
+  const handleExportChart = () => {
+    chartRef.current?.exportImage(`${member.name}_完成进度.png`);
+  };
+
+  // 准备图表数据
+  const chartData = [
+    { label: '年度拆解', breakdownProgress: progress.annualBreakdownProgress, executionProgress: progress.annualExecutionProgress },
+    { label: '月度拆解', breakdownProgress: progress.monthlyBreakdownProgress, executionProgress: progress.monthlyExecutionProgress },
+    { label: '周拆解', breakdownProgress: progress.weeklyBreakdownProgress, executionProgress: progress.weeklyExecutionProgress },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* 成员信息卡片 */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-start gap-6">
+            <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            
+            <Avatar className="w-20 h-20">
+              <AvatarImage src={member.avatar} alt={member.name} />
+              <AvatarFallback className="text-2xl bg-indigo-100 text-indigo-700">
+                {getInitials(member.name)}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h2 className="text-2xl font-bold text-slate-800">{member.name}</h2>
+                <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
+                  {member.status === 'active' ? '在职' : '离职'}
+                </Badge>
+              </div>
+              
+              <div className="flex flex-wrap gap-4 text-sm text-slate-500">
+                {member.phone && (
+                  <span className="flex items-center gap-1">
+                    <span className="font-medium">电话:</span> {member.phone}
+                  </span>
+                )}
+                {member.wechat && (
+                  <span className="flex items-center gap-1">
+                    <span className="font-medium">微信:</span> {member.wechat}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  入职: {format(new Date(member.joinDate), 'yyyy-MM-dd')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 进度概览卡片 */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-indigo-600" />
+              完成进度概览
+            </h3>
+            <Button variant="outline" size="sm" onClick={handleExportChart} className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              导出图表
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+            <div className="text-center">
+              <div className="relative w-20 h-20 mx-auto mb-3">
+                <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
+                  <circle 
+                    cx="50" cy="50" r="40" fill="none" stroke="#6366f1" strokeWidth="8" 
+                    strokeDasharray={`${progress.annualBreakdownProgress * 2.51} 251`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-bold text-indigo-600">
+                    {progress.annualBreakdownProgress.toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm font-medium text-slate-700">年度拆解进度</p>
+            </div>
+
+            <div className="text-center">
+              <div className="relative w-20 h-20 mx-auto mb-3">
+                <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
+                  <circle 
+                    cx="50" cy="50" r="40" fill="none" stroke="#10b981" strokeWidth="8" 
+                    strokeDasharray={`${progress.annualExecutionProgress * 2.51} 251`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-bold text-green-600">
+                    {progress.annualExecutionProgress.toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm font-medium text-slate-700">年度执行进度</p>
+            </div>
+
+            <div className="text-center">
+              <div className="relative w-20 h-20 mx-auto mb-3">
+                <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
+                  <circle 
+                    cx="50" cy="50" r="40" fill="none" stroke="#8b5cf6" strokeWidth="8" 
+                    strokeDasharray={`${progress.monthlyBreakdownProgress * 2.51} 251`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-bold text-purple-600">
+                    {progress.monthlyBreakdownProgress.toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm font-medium text-slate-700">月度拆解进度</p>
+            </div>
+
+            <div className="text-center">
+              <div className="relative w-20 h-20 mx-auto mb-3">
+                <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
+                  <circle 
+                    cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" strokeWidth="8" 
+                    strokeDasharray={`${progress.weeklyBreakdownProgress * 2.51} 251`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-bold text-amber-600">
+                    {progress.weeklyBreakdownProgress.toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm font-medium text-slate-700">周拆解进度</p>
+            </div>
+          </div>
+
+          {/* 进度图表 */}
+          <div className="mt-6 pt-6 border-t border-slate-100">
+            <ProgressChart 
+              ref={chartRef}
+              data={chartData} 
+              title={`${member.name} - 各层级目标完成进度`} 
+              type="bar" 
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 目标标签页 */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="annual" className="flex items-center gap-2">
+            <Target className="w-4 h-4" />
+            年度目标
+          </TabsTrigger>
+          <TabsTrigger value="monthly" className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            月度目标
+          </TabsTrigger>
+          <TabsTrigger value="weekly" className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4" />
+            周目标
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="annual" className="space-y-4">
+          {annualGoals.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Target className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                <p className="text-slate-500">暂无年度目标</p>
+              </CardContent>
+            </Card>
+          ) : (
+            annualGoals.map(goal => (
+              <Card key={goal.id}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-slate-800">{goal.year}年 目标规划</h3>
+                    <Badge variant="outline">{goal.year}</Badge>
+                  </div>
+
+                  {/* 拆解类目标 */}
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                      <Target className="w-4 h-4 text-indigo-500" />
+                      拆解类目标
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div className="bg-green-50 rounded-lg p-3">
+                        <span className="text-xs text-green-700 font-medium">收入</span>
+                        <p className="text-lg font-bold text-green-600">¥{goal.breakdownGoals.income.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-lg p-3">
+                        <span className="text-xs text-amber-700 font-medium">级别</span>
+                        <p className="text-sm font-semibold text-amber-600 truncate">{goal.breakdownGoals.level || '-'}</p>
+                      </div>
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <span className="text-xs text-blue-700 font-medium">单量</span>
+                        <p className="text-lg font-bold text-blue-600">{goal.breakdownGoals.orderCount}</p>
+                      </div>
+                      <div className="bg-purple-50 rounded-lg p-3">
+                        <span className="text-xs text-purple-700 font-medium">零售量</span>
+                        <p className="text-lg font-bold text-purple-600">{goal.breakdownGoals.retailVolume}</p>
+                      </div>
+                      <div className="bg-cyan-50 rounded-lg p-3">
+                        <span className="text-xs text-cyan-700 font-medium">旅游</span>
+                        <p className="text-sm text-cyan-600 truncate">{goal.breakdownGoals.travelGoal || '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 执行类目标 */}
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-green-500" />
+                      执行类目标
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <span className="text-xs text-blue-700 font-medium">新增名单</span>
+                        <p className="text-lg font-bold text-blue-600">{goal.executionGoals.newLeads}</p>
+                      </div>
+                      <div className="bg-purple-50 rounded-lg p-3">
+                        <span className="text-xs text-purple-700 font-medium">拜访人次</span>
+                        <p className="text-lg font-bold text-purple-600">{goal.executionGoals.visitCount}</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-lg p-3">
+                        <span className="text-xs text-amber-700 font-medium">新增5A名单</span>
+                        <p className="text-lg font-bold text-amber-600">{goal.executionGoals.new5ALeads}</p>
+                      </div>
+                      <div className="bg-red-50 rounded-lg p-3">
+                        <span className="text-xs text-red-700 font-medium">拜访5A人次</span>
+                        <p className="text-lg font-bold text-red-600">{goal.executionGoals.visit5ACount}</p>
+                      </div>
+                      <div className="bg-indigo-50 rounded-lg p-3">
+                        <span className="text-xs text-indigo-700 font-medium">邀约沙龙</span>
+                        <p className="text-lg font-bold text-indigo-600">{goal.executionGoals.salonInviteCount}</p>
+                      </div>
+                      <div className="bg-cyan-50 rounded-lg p-3">
+                        <span className="text-xs text-cyan-700 font-medium">引流卡量</span>
+                        <p className="text-lg font-bold text-cyan-600">{goal.executionGoals.引流CardCount}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 非量化指标 */}
+                  {goal.qualitativeGoals && (
+                    <div className="bg-gradient-to-br from-purple-50/70 to-pink-50/50 rounded-xl border border-purple-100 p-4">
+                      <h4 className="text-sm font-semibold text-purple-800 mb-4 flex items-center gap-2">
+                        <Award className="w-4 h-4 text-purple-600" />
+                        非量化指标目标
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {goal.qualitativeGoals.learningGoal && (
+                          <div className="bg-white/70 rounded-lg p-3 border border-purple-100">
+                            <div className="flex items-center gap-2 mb-2">
+                              <BookOpen className="w-4 h-4 text-purple-500" />
+                              <span className="text-xs font-medium text-purple-700">学习目标</span>
+                            </div>
+                            <p className="text-sm text-slate-700 leading-relaxed">{goal.qualitativeGoals.learningGoal}</p>
+                          </div>
+                        )}
+                        {goal.qualitativeGoals.healthGoal && (
+                          <div className="bg-white/70 rounded-lg p-3 border border-purple-100">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Heart className="w-4 h-4 text-red-500" />
+                              <span className="text-xs font-medium text-purple-700">健康目标</span>
+                            </div>
+                            <p className="text-sm text-slate-700 leading-relaxed">{goal.qualitativeGoals.healthGoal}</p>
+                          </div>
+                        )}
+                        {goal.qualitativeGoals.relationshipGoal && (
+                          <div className="bg-white/70 rounded-lg p-3 border border-purple-100">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Users className="w-4 h-4 text-blue-500" />
+                              <span className="text-xs font-medium text-purple-700">关系目标</span>
+                            </div>
+                            <p className="text-sm text-slate-700 leading-relaxed">{goal.qualitativeGoals.relationshipGoal}</p>
+                          </div>
+                        )}
+                        {goal.qualitativeGoals.hobbyGoal && (
+                          <div className="bg-white/70 rounded-lg p-3 border border-purple-100">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Sparkles className="w-4 h-4 text-amber-500" />
+                              <span className="text-xs font-medium text-purple-700">爱好目标</span>
+                            </div>
+                            <p className="text-sm text-slate-700 leading-relaxed">{goal.qualitativeGoals.hobbyGoal}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 年度目标实际完成按钮 */}
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <Button
+                      size="sm"
+                      onClick={() => handleOpenAnnualActual(goal)}
+                      className="flex items-center gap-2"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      更新实际完成
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="monthly" className="space-y-4">
+          <div className="flex justify-end mb-4">
+            <Button
+              onClick={handleOpenCreateMonthlyGoal}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Plus className="w-4 h-4" />
+              新建月度目标
+            </Button>
+          </div>
+          {monthlyGoals.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Calendar className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                <p className="text-slate-500">暂无月度目标</p>
+                <p className="text-sm text-slate-400 mt-2">点击上方按钮创建新的月度目标</p>
+              </CardContent>
+            </Card>
+          ) : (
+            monthlyGoals.map(goal => {
+              const breakdownProgress = calculateBreakdownProgress(goal);
+              const executionProgress = calculateExecutionProgress(goal);
+
+              return (
+                <Card key={goal.id}>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-slate-800">
+                        {getMonthDisplayName(goal.monthISO)}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{goal.monthISO}</Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenMonthlyGoal(goal)}
+                          className="flex items-center gap-1"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          编辑目标
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* 进度条 */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-slate-600">拆解进度</span>
+                          <span className="font-medium text-indigo-600">{breakdownProgress.toFixed(1)}%</span>
+                        </div>
+                        <Progress value={breakdownProgress} className="h-2" />
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-slate-600">执行进度</span>
+                          <span className="font-medium text-green-600">{executionProgress.toFixed(1)}%</span>
+                        </div>
+                        <Progress value={executionProgress} className="h-2" />
+                      </div>
+                    </div>
+
+                    {/* 目标详情 */}
+                    <div className="space-y-4">
+                      {/* 拆解类 */}
+                      <div className="bg-indigo-50/50 rounded-lg p-4">
+                        <h4 className="text-sm font-medium text-slate-700 mb-3">拆解类目标</h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="text-center">
+                            <p className="text-xs text-slate-500 mb-1">收入</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-slate-700">
+                                计划: ¥{goal.breakdownGoals.income.toLocaleString()}
+                              </p>
+                              {goal.actualBreakdown?.income !== undefined && (
+                                <p className={`text-sm font-bold ${(goal.actualBreakdown.income >= goal.breakdownGoals.income) ? 'text-green-600' : 'text-amber-600'}`}>
+                                  实际: ¥{goal.actualBreakdown.income.toLocaleString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs text-slate-500 mb-1">单量</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-slate-700">
+                                计划: {goal.breakdownGoals.orderCount}
+                              </p>
+                              {goal.actualBreakdown?.orderCount !== undefined && (
+                                <p className={`text-sm font-bold ${(goal.actualBreakdown.orderCount >= goal.breakdownGoals.orderCount) ? 'text-green-600' : 'text-amber-600'}`}>
+                                  实际: {goal.actualBreakdown.orderCount}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs text-slate-500 mb-1">零售量</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-slate-700">
+                                计划: {goal.breakdownGoals.retailVolume}
+                              </p>
+                              {goal.actualBreakdown?.retailVolume !== undefined && (
+                                <p className={`text-sm font-bold ${(goal.actualBreakdown.retailVolume >= goal.breakdownGoals.retailVolume) ? 'text-green-600' : 'text-amber-600'}`}>
+                                  实际: {goal.actualBreakdown.retailVolume}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 执行类 */}
+                      <div className="bg-green-50/50 rounded-lg p-4">
+                        <h4 className="text-sm font-medium text-slate-700 mb-3">执行类目标</h4>
+                        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                          {[
+                            { key: 'newLeads', label: '新增名单' },
+                            { key: 'visitCount', label: '拜访人次' },
+                            { key: 'new5ALeads', label: '新增5A' },
+                            { key: 'visit5ACount', label: '拜访5A' },
+                            { key: 'salonInviteCount', label: '邀约沙龙' },
+                            { key: '引流CardCount', label: '引流卡' },
+                          ].map(({ key, label }) => {
+                            const planValue = goal.executionGoals[key as keyof typeof goal.executionGoals] as number;
+                            const actualValue = goal.actualExecution?.[key as keyof typeof goal.actualExecution] as number | undefined;
+                            return (
+                              <div key={key} className="text-center">
+                                <p className="text-xs text-slate-500 mb-1">{label}</p>
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium text-slate-700">{planValue}</p>
+                                  {actualValue !== undefined && (
+                                    <p className={`text-sm font-bold ${(actualValue >= planValue) ? 'text-green-600' : 'text-amber-600'}`}>
+                                      {actualValue}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenMonthlyActual(goal)}
+                          className="flex items-center gap-2"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          更新实际完成
+                        </Button>
+                        {onDeleteMonthlyGoal && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteMonthlyGoal(goal.id)}
+                            className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            删除
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </TabsContent>
+
+        <TabsContent value="weekly" className="space-y-4">
+          <div className="flex justify-end mb-4">
+            <Button
+              onClick={handleOpenCreateWeeklyGoal}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Plus className="w-4 h-4" />
+              新建周目标
+            </Button>
+          </div>
+          {weeklyGoals.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <CalendarDays className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                <p className="text-slate-500">暂无周目标</p>
+                <p className="text-sm text-slate-400 mt-2">点击上方按钮创建新的周目标</p>
+              </CardContent>
+            </Card>
+          ) : (
+            weeklyGoals.map(goal => {
+              const breakdownProgress = calculateBreakdownProgress(goal);
+              const executionProgress = calculateExecutionProgress(goal);
+
+              return (
+                <Card key={goal.id}>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-slate-800">
+                        第{goal.week}周（{goal.weekStartDate ? format(new Date(goal.weekStartDate), 'M/d') : ''}-{goal.weekEndDate ? format(new Date(goal.weekEndDate), 'M/d') : ''}）
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {goal.weekISO}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenWeeklyGoal(goal)}
+                          className="flex items-center gap-1"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          编辑目标
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* 进度条 */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-slate-600">拆解进度</span>
+                          <span className="font-medium text-indigo-600">{breakdownProgress.toFixed(1)}%</span>
+                        </div>
+                        <Progress value={breakdownProgress} className="h-2" />
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-slate-600">执行进度</span>
+                          <span className="font-medium text-green-600">{executionProgress.toFixed(1)}%</span>
+                        </div>
+                        <Progress value={executionProgress} className="h-2" />
+                      </div>
+                    </div>
+
+                    {/* 目标详情 */}
+                    <div className="space-y-4">
+                      {/* 拆解类 */}
+                      <div className="bg-indigo-50/50 rounded-lg p-4">
+                        <h4 className="text-sm font-medium text-slate-700 mb-3">拆解类目标</h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="text-center">
+                            <p className="text-xs text-slate-500 mb-1">收入</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-slate-700">
+                                计划: ¥{goal.breakdownGoals.income.toLocaleString()}
+                              </p>
+                              {goal.actualBreakdown?.income !== undefined && (
+                                <p className={`text-sm font-bold ${(goal.actualBreakdown.income >= goal.breakdownGoals.income) ? 'text-green-600' : 'text-amber-600'}`}>
+                                  实际: ¥{goal.actualBreakdown.income.toLocaleString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs text-slate-500 mb-1">单量</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-slate-700">
+                                计划: {goal.breakdownGoals.orderCount}
+                              </p>
+                              {goal.actualBreakdown?.orderCount !== undefined && (
+                                <p className={`text-sm font-bold ${(goal.actualBreakdown.orderCount >= goal.breakdownGoals.orderCount) ? 'text-green-600' : 'text-amber-600'}`}>
+                                  实际: {goal.actualBreakdown.orderCount}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs text-slate-500 mb-1">零售量</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-slate-700">
+                                计划: {goal.breakdownGoals.retailVolume}
+                              </p>
+                              {goal.actualBreakdown?.retailVolume !== undefined && (
+                                <p className={`text-sm font-bold ${(goal.actualBreakdown.retailVolume >= goal.breakdownGoals.retailVolume) ? 'text-green-600' : 'text-amber-600'}`}>
+                                  实际: {goal.actualBreakdown.retailVolume}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 执行类 */}
+                      <div className="bg-green-50/50 rounded-lg p-4">
+                        <h4 className="text-sm font-medium text-slate-700 mb-3">执行类目标</h4>
+                        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                          {[
+                            { key: 'newLeads', label: '新增名单' },
+                            { key: 'visitCount', label: '拜访人次' },
+                            { key: 'new5ALeads', label: '新增5A' },
+                            { key: 'visit5ACount', label: '拜访5A' },
+                            { key: 'salonInviteCount', label: '邀约沙龙' },
+                            { key: '引流CardCount', label: '引流卡' },
+                          ].map(({ key, label }) => {
+                            const planValue = goal.executionGoals[key as keyof typeof goal.executionGoals] as number;
+                            const actualValue = goal.actualExecution?.[key as keyof typeof goal.actualExecution] as number | undefined;
+                            return (
+                              <div key={key} className="text-center">
+                                <p className="text-xs text-slate-500 mb-1">{label}</p>
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium text-slate-700">{planValue}</p>
+                                  {actualValue !== undefined && (
+                                    <p className={`text-sm font-bold ${(actualValue >= planValue) ? 'text-green-600' : 'text-amber-600'}`}>
+                                      {actualValue}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenWeeklyActual(goal)}
+                          className="flex items-center gap-2"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          更新实际完成
+                        </Button>
+                        {onDeleteWeeklyGoal && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteWeeklyGoal(goal.id)}
+                            className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            删除
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </TabsContent>
+      </Tabs>
+      
+      {/* 实际完成更新模态框 */}
+      <ActualUpdateModal
+        isOpen={isActualModalOpen}
+        onClose={() => setIsActualModalOpen(false)}
+        onSubmit={handleUpdateActual}
+        goal={selectedGoal}
+        type={modalType}
+      />
+
+      {/* 目标设置模态框 - 编辑模式 */}
+      <GoalSettingModal
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+        onSubmit={handleUpdateGoal}
+        goal={selectedGoal}
+        title={modalType === 'monthly' ? '编辑月度目标' : '编辑周目标'}
+        mode="edit"
+        type={modalType}
+      />
+
+      {/* 创建目标模态框 - 创建模式 */}
+      <GoalSettingModal
+        isOpen={isCreateGoalModalOpen}
+        onClose={() => setIsCreateGoalModalOpen(false)}
+        onSubmit={handleCreateGoal}
+        goal={null}
+        title={createModalMode === 'monthly' ? '新建月度目标' : '新建周目标'}
+        mode="create"
+        type={createModalMode}
+        existingMonths={monthlyGoals.map(g => g.month)}
+        existingWeeks={weeklyGoals.map(g => g.week)}
+      />
+    </div>
+  );
+};

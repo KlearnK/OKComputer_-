@@ -1,0 +1,166 @@
+/* 年度目标管理系统样式 */
+
+/* 动画效果 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 进度条动画 */
+.progress-animate {
+  transition: width 0.5s ease-out;
+}
+
+/* 卡片悬停效果增强 */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* 按钮磁性效果 */
+.btn-magnetic {
+  transition: transform 0.2s ease-out;
+}
+
+.btn-magnetic:hover {
+  transform: scale(1.02);
+}
+
+.btn-magnetic:active {
+  transform: scale(0.98);
+}
+
+/* 输入框聚焦效果 */
+.input-focus {
+  transition: all 0.2s ease-out;
+}
+
+.input-focus:focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* 标签页切换动画 */
+.tab-content {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* 统计数据数字动画 */
+@keyframes count-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stat-number {
+  animation: count-up 0.6s ease-out;
+}
+
+/* 进度环动画 */
+@keyframes progress-ring {
+  from {
+    stroke-dasharray: 0 251;
+  }
+}
+
+.progress-ring-animate {
+  animation: progress-ring 1s ease-out;
+}
+
+/* 图标悬停旋转 */
+.icon-rotate:hover {
+  transform: rotate(5deg);
+  transition: transform 0.2s ease-out;
+}
+
+/* 渐变文字效果 */
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 浮动效果 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* 脉冲光晕效果 */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .animate-fade-in {
+    animation-duration: 0.2s;
+  }
+}
+
+/* 减少动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

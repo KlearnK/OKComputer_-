@@ -1,0 +1,486 @@
+import { useState, useEffect, useCallback } from 'react';
+import type { 
+  TeamMember, 
+  TeamMemberAnnualGoal, 
+  TeamMemberMonthlyGoal, 
+  TeamMemberWeeklyGoal,
+  TeamStats,
+  MemberProgress
+} from '@/types/team';
+import { getYearMonths, getMonthWeeks } from '@/utils/dateUtils';
+
+// 生成唯一ID
+const generateId = () => Math.random().toString(36).substr(2, 9);
+
+// 存储键名
+const TEAM_MEMBERS_KEY = 'team_members';
+const TEAM_ANNUAL_GOALS_KEY = 'team_annual_goals';
+const TEAM_MONTHLY_GOALS_KEY = 'team_monthly_goals';
+const TEAM_WEEKLY_GOALS_KEY = 'team_weekly_goals';
+
+export const useTeam = () => {
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [annualGoals, setAnnualGoals] = useState<TeamMemberAnnualGoal[]>([]);
+  const [monthlyGoals, setMonthlyGoals] = useState<TeamMemberMonthlyGoal[]>([]);
+  const [weeklyGoals, setWeeklyGoals] = useState<TeamMemberWeeklyGoal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 从localStorage加载数据
+  useEffect(() => {
+    const loadData = () => {
+      try {
+        const membersData = localStorage.getItem(TEAM_MEMBERS_KEY);
+        const annualData = localStorage.getItem(TEAM_ANNUAL_GOALS_KEY);
+        const monthlyData = localStorage.getItem(TEAM_MONTHLY_GOALS_KEY);
+        const weeklyData = localStorage.getItem(TEAM_WEEKLY_GOALS_KEY);
+
+        if (membersData) setMembers(JSON.parse(membersData));
+        if (annualData) setAnnualGoals(JSON.parse(annualData));
+        if (monthlyData) setMonthlyGoals(JSON.parse(monthlyData));
+        if (weeklyData) setWeeklyGoals(JSON.parse(weeklyData));
+      } catch (error) {
+        console.error('加载团队数据失败:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // 保存数据到localStorage
+  const saveMembers = useCallback((data: TeamMember[]) => {
+    localStorage.setItem(TEAM_MEMBERS_KEY, JSON.stringify(data));
+    setMembers(data);
+  }, []);
+
+  const saveAnnualGoals = useCallback((data: TeamMemberAnnualGoal[]) => {
+    localStorage.setItem(TEAM_ANNUAL_GOALS_KEY, JSON.stringify(data));
+    setAnnualGoals(data);
+  }, []);
+
+  const saveMonthlyGoals = useCallback((data: TeamMemberMonthlyGoal[]) => {
+    localStorage.setItem(TEAM_MONTHLY_GOALS_KEY, JSON.stringify(data));
+    setMonthlyGoals(data);
+  }, []);
+
+  const saveWeeklyGoals = useCallback((data: TeamMemberWeeklyGoal[]) => {
+    localStorage.setItem(TEAM_WEEKLY_GOALS_KEY, JSON.stringify(data));
+    setWeeklyGoals(data);
+  }, []);
+
+  // 团队成员管理
+  const createMember = useCallback((member: Omit<TeamMember, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newMember: TeamMember = {
+      ...member,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    saveMembers([...members, newMember]);
+    return newMember;
+  }, [members, saveMembers]);
+
+  const updateMember = useCallback((id: string, updates: Partial<TeamMember>) => {
+    const updated = members.map(m => 
+      m.id === id ? { ...m, ...updates, updatedAt: new Date().toISOString() } : m
+    );
+    saveMembers(updated);
+  }, [members, saveMembers]);
+
+  const deleteMember = useCallback((id: string) => {
+    // 删除成员及其所有相关目标
+    const updatedMembers = members.filter(m => m.id !== id);
+    saveMembers(updatedMembers);
+
+    // 删除相关的年度目标
+    const updatedAnnual = annualGoals.filter(g => g.memberId !== id);
+    saveAnnualGoals(updatedAnnual);
+
+    // 删除相关的月度目标
+    const updatedMonthly = monthlyGoals.filter(g => g.memberId !== id);
+    saveMonthlyGoals(updatedMonthly);
+
+    // 删除相关的周目标
+    const updatedWeekly = weeklyGoals.filter(g => g.memberId !== id);
+    saveWeeklyGoals(updatedWeekly);
+  }, [members, annualGoals, monthlyGoals, weeklyGoals, saveMembers, saveAnnualGoals, saveMonthlyGoals, saveWeeklyGoals]);
+
+  // 自动为年度目标创建月度和周目标（已废弃，但保留以备将来使用）
+  // @ts-ignore - 此函数可能在未来版本中使用
+  const createMonthlyAndWeeklyGoalsForAnnual = useCallback((annualGoal: TeamMemberAnnualGoal) => {
+    const year = annualGoal.year;
+    const memberId = annualGoal.memberId;
+    
+    // 获取该年的所有月份
+    const months = getYearMonths(year);
+    
+    // 为每个月创建月度目标
+    const newMonthlyGoals: TeamMemberMonthlyGoal[] = [];
+    const newWeeklyGoals: TeamMemberWeeklyGoal[] = [];
+    
+    months.forEach((month, index) => {
+      const monthNum = index + 1;
+      
+      // 计算月度目标（年度目标除以12）
+      const monthlyIncome = Math.round(annualGoal.breakdownGoals.income / 12);
+      const monthlyOrderCount = Math.round(annualGoal.breakdownGoals.orderCount / 12);
+      const monthlyRetailVolume = Math.round(annualGoal.breakdownGoals.retailVolume / 12);
+      
+      // 计算执行类目标的月度分配
+      const monthlyNewLeads = Math.round(annualGoal.executionGoals.newLeads / 12);
+      const monthlyVisitCount = Math.round(annualGoal.executionGoals.visitCount / 12);
+      const monthlyNew5ALeads = Math.round(annualGoal.executionGoals.new5ALeads / 12);
+      const monthlyVisit5ACount = Math.round(annualGoal.executionGoals.visit5ACount / 12);
+      const monthlySalonInviteCount = Math.round(annualGoal.executionGoals.salonInviteCount / 12);
+      const monthly引流CardCount = Math.round(annualGoal.executionGoals.引流CardCount / 12);
+      
+      // 创建月度目标
+      const monthlyGoal: TeamMemberMonthlyGoal = {
+        id: generateId(),
+        memberId: memberId,
+        annualGoalId: annualGoal.id,
+        year: year,
+        month: monthNum,
+        monthISO: month.monthISO,
+        breakdownGoals: {
+          income: monthlyIncome,
+          level: annualGoal.breakdownGoals.level,
+          orderCount: monthlyOrderCount,
+          retailVolume: monthlyRetailVolume,
+          travelGoal: annualGoal.breakdownGoals.travelGoal,
+        },
+        executionGoals: {
+          newLeads: monthlyNewLeads,
+          visitCount: monthlyVisitCount,
+          new5ALeads: monthlyNew5ALeads,
+          visit5ACount: monthlyVisit5ACount,
+          salonInviteCount: monthlySalonInviteCount,
+          引流CardCount: monthly引流CardCount,
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      newMonthlyGoals.push(monthlyGoal);
+      
+      // 为该月创建周目标
+      const weeks = getMonthWeeks(year, monthNum);
+      weeks.forEach((week) => {
+        // 计算周目标（月度目标除以该月的周数）
+        const weeksInMonth = weeks.length;
+        const weeklyIncome = Math.round(monthlyIncome / weeksInMonth);
+        const weeklyOrderCount = Math.round(monthlyOrderCount / weeksInMonth);
+        const weeklyRetailVolume = Math.round(monthlyRetailVolume / weeksInMonth);
+        
+        const weeklyNewLeads = Math.round(monthlyNewLeads / weeksInMonth);
+        const weeklyVisitCount = Math.round(monthlyVisitCount / weeksInMonth);
+        const weeklyNew5ALeads = Math.round(monthlyNew5ALeads / weeksInMonth);
+        const weeklyVisit5ACount = Math.round(monthlyVisit5ACount / weeksInMonth);
+        const weeklySalonInviteCount = Math.round(monthlySalonInviteCount / weeksInMonth);
+        const weekly引流CardCount = Math.round(monthly引流CardCount / weeksInMonth);
+        
+        const weeklyGoal: TeamMemberWeeklyGoal = {
+          id: generateId(),
+          memberId: memberId,
+          monthlyGoalId: monthlyGoal.id,
+          year: year,
+          month: monthNum,
+          week: week.weekNum,
+          weekISO: week.weekISO,
+          weekStartDate: week.startDate,
+          weekEndDate: week.endDate,
+          breakdownGoals: {
+            income: weeklyIncome,
+            level: annualGoal.breakdownGoals.level,
+            orderCount: weeklyOrderCount,
+            retailVolume: weeklyRetailVolume,
+            travelGoal: annualGoal.breakdownGoals.travelGoal,
+          },
+          executionGoals: {
+            newLeads: weeklyNewLeads,
+            visitCount: weeklyVisitCount,
+            new5ALeads: weeklyNew5ALeads,
+            visit5ACount: weeklyVisit5ACount,
+            salonInviteCount: weeklySalonInviteCount,
+            引流CardCount: weekly引流CardCount,
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        newWeeklyGoals.push(weeklyGoal);
+      });
+    });
+    
+    // 保存所有月度和周目标
+    if (newMonthlyGoals.length > 0) {
+      saveMonthlyGoals([...monthlyGoals, ...newMonthlyGoals]);
+    }
+    if (newWeeklyGoals.length > 0) {
+      saveWeeklyGoals([...weeklyGoals, ...newWeeklyGoals]);
+    }
+  }, [monthlyGoals, weeklyGoals, saveMonthlyGoals, saveWeeklyGoals]);
+
+  // 年度目标管理 - 仅创建年度目标，不自动分配月度和周目标
+  const createAnnualGoal = useCallback((goal: Omit<TeamMemberAnnualGoal, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newGoal: TeamMemberAnnualGoal = {
+      ...goal,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    
+    // 保存年度目标
+    const updatedAnnualGoals = [...annualGoals, newGoal];
+    saveAnnualGoals(updatedAnnualGoals);
+
+    return newGoal;
+  }, [annualGoals, saveAnnualGoals]);
+
+  const updateAnnualGoal = useCallback((id: string, updates: Partial<TeamMemberAnnualGoal>) => {
+    const updated = annualGoals.map(g => 
+      g.id === id ? { ...g, ...updates, updatedAt: new Date().toISOString() } : g
+    );
+    saveAnnualGoals(updated);
+  }, [annualGoals, saveAnnualGoals]);
+
+  const deleteAnnualGoal = useCallback((id: string) => {
+    // 删除年度目标及其相关的月度和周目标
+    const goalToDelete = annualGoals.find(g => g.id === id);
+    if (!goalToDelete) return;
+
+    // 删除年度目标
+    const updatedAnnual = annualGoals.filter(g => g.id !== id);
+    saveAnnualGoals(updatedAnnual);
+
+    // 删除相关的月度目标
+    const updatedMonthly = monthlyGoals.filter(g => g.annualGoalId !== id);
+    saveMonthlyGoals(updatedMonthly);
+
+    // 删除相关的周目标
+    const monthlyGoalIds = monthlyGoals.filter(g => g.annualGoalId === id).map(g => g.id);
+    const updatedWeekly = weeklyGoals.filter(g => !monthlyGoalIds.includes(g.monthlyGoalId));
+    saveWeeklyGoals(updatedWeekly);
+  }, [annualGoals, monthlyGoals, weeklyGoals, saveAnnualGoals, saveMonthlyGoals, saveWeeklyGoals]);
+
+  // 月度目标管理
+  const createMonthlyGoal = useCallback((goal: Omit<TeamMemberMonthlyGoal, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newGoal: TeamMemberMonthlyGoal = {
+      ...goal,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    saveMonthlyGoals([...monthlyGoals, newGoal]);
+    return newGoal;
+  }, [monthlyGoals, saveMonthlyGoals]);
+
+  const updateMonthlyGoal = useCallback((id: string, updates: Partial<TeamMemberMonthlyGoal>) => {
+    const updated = monthlyGoals.map(g => 
+      g.id === id ? { ...g, ...updates, updatedAt: new Date().toISOString() } : g
+    );
+    saveMonthlyGoals(updated);
+  }, [monthlyGoals, saveMonthlyGoals]);
+
+  const updateMonthlyGoalActual = useCallback((id: string, actualBreakdown: Partial<TeamMemberMonthlyGoal['breakdownGoals']>, actualExecution: Partial<TeamMemberMonthlyGoal['executionGoals']>) => {
+    const updated = monthlyGoals.map(g => 
+      g.id === id ? { 
+        ...g, 
+        actualBreakdown: { ...g.actualBreakdown, ...actualBreakdown },
+        actualExecution: { ...g.actualExecution, ...actualExecution },
+        updatedAt: new Date().toISOString() 
+      } : g
+    );
+    saveMonthlyGoals(updated);
+  }, [monthlyGoals, saveMonthlyGoals]);
+
+  // 周目标管理
+  const createWeeklyGoal = useCallback((goal: Omit<TeamMemberWeeklyGoal, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newGoal: TeamMemberWeeklyGoal = {
+      ...goal,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    saveWeeklyGoals([...weeklyGoals, newGoal]);
+    return newGoal;
+  }, [weeklyGoals, saveWeeklyGoals]);
+
+  const updateWeeklyGoal = useCallback((id: string, updates: Partial<TeamMemberWeeklyGoal>) => {
+    const updated = weeklyGoals.map(g => 
+      g.id === id ? { ...g, ...updates, updatedAt: new Date().toISOString() } : g
+    );
+    saveWeeklyGoals(updated);
+  }, [weeklyGoals, saveWeeklyGoals]);
+
+  const updateWeeklyGoalActual = useCallback((id: string, actualBreakdown: Partial<TeamMemberWeeklyGoal['breakdownGoals']>, actualExecution: Partial<TeamMemberWeeklyGoal['executionGoals']>) => {
+    const updated = weeklyGoals.map(g => 
+      g.id === id ? { 
+        ...g, 
+        actualBreakdown: { ...g.actualBreakdown, ...actualBreakdown },
+        actualExecution: { ...g.actualExecution, ...actualExecution },
+        updatedAt: new Date().toISOString() 
+      } : g
+    );
+    saveWeeklyGoals(updated);
+  }, [weeklyGoals, saveWeeklyGoals]);
+
+  // 计算目标完成进度（基于实际完成与目标的比率）
+  const calculateBreakdownProgress = (goals: Array<{ breakdownGoals: { income: number; orderCount: number; retailVolume: number }; actualBreakdown?: { income?: number; orderCount?: number; retailVolume?: number } }>) => {
+    if (goals.length === 0) return 0;
+    let totalProgress = 0;
+    goals.forEach(g => {
+      const target = g.breakdownGoals.income + g.breakdownGoals.orderCount + g.breakdownGoals.retailVolume;
+      const actual = (g.actualBreakdown?.income || 0) + (g.actualBreakdown?.orderCount || 0) + (g.actualBreakdown?.retailVolume || 0);
+      totalProgress += target > 0 ? Math.min((actual / target) * 100, 100) : 0;
+    });
+    return totalProgress / goals.length;
+  };
+
+  const calculateExecutionProgress = (goals: Array<{ executionGoals: { newLeads: number; visitCount: number; new5ALeads: number; visit5ACount: number; salonInviteCount: number; 引流CardCount: number }; actualExecution?: { newLeads?: number; visitCount?: number; new5ALeads?: number; visit5ACount?: number; salonInviteCount?: number; 引流CardCount?: number } }>) => {
+    if (goals.length === 0) return 0;
+    let totalProgress = 0;
+    goals.forEach(g => {
+      const target = g.executionGoals.newLeads + g.executionGoals.visitCount + g.executionGoals.new5ALeads + 
+                     g.executionGoals.visit5ACount + g.executionGoals.salonInviteCount + g.executionGoals.引流CardCount;
+      const actual = (g.actualExecution?.newLeads || 0) + (g.actualExecution?.visitCount || 0) + 
+                     (g.actualExecution?.new5ALeads || 0) + (g.actualExecution?.visit5ACount || 0) +
+                     (g.actualExecution?.salonInviteCount || 0) + (g.actualExecution?.引流CardCount || 0);
+      totalProgress += target > 0 ? Math.min((actual / target) * 100, 100) : 0;
+    });
+    return totalProgress / goals.length;
+  };
+
+  // 获取团队成员的进度
+  const getMemberProgress = useCallback((memberId: string): MemberProgress => {
+    const memberAnnualGoals = annualGoals.filter(g => g.memberId === memberId);
+    const memberMonthlyGoals = monthlyGoals.filter(g => g.memberId === memberId);
+    const memberWeeklyGoals = weeklyGoals.filter(g => g.memberId === memberId);
+
+    // 计算年度进度
+    const annualBreakdownProgress = calculateBreakdownProgress(memberAnnualGoals);
+    const annualExecutionProgress = calculateExecutionProgress(memberAnnualGoals);
+
+    // 计算月度进度
+    const monthlyBreakdownProgress = calculateBreakdownProgress(memberMonthlyGoals);
+    const monthlyExecutionProgress = calculateExecutionProgress(memberMonthlyGoals);
+
+    // 计算周进度
+    const weeklyBreakdownProgress = calculateBreakdownProgress(memberWeeklyGoals);
+    const weeklyExecutionProgress = calculateExecutionProgress(memberWeeklyGoals);
+
+    // 计算已完成数量（实际完成 >= 目标）
+    const completedAnnual = memberAnnualGoals.filter(g => {
+      const target = g.breakdownGoals.income + g.breakdownGoals.orderCount + g.breakdownGoals.retailVolume;
+      const actual = (g.actualBreakdown?.income || 0) + (g.actualBreakdown?.orderCount || 0) + (g.actualBreakdown?.retailVolume || 0);
+      return actual >= target && target > 0;
+    }).length;
+
+    const completedMonthly = memberMonthlyGoals.filter(g => {
+      const target = g.breakdownGoals.income + g.breakdownGoals.orderCount + g.breakdownGoals.retailVolume;
+      const actual = (g.actualBreakdown?.income || 0) + (g.actualBreakdown?.orderCount || 0) + (g.actualBreakdown?.retailVolume || 0);
+      return actual >= target && target > 0;
+    }).length;
+
+    const completedWeekly = memberWeeklyGoals.filter(g => {
+      const target = g.breakdownGoals.income + g.breakdownGoals.orderCount + g.breakdownGoals.retailVolume;
+      const actual = (g.actualBreakdown?.income || 0) + (g.actualBreakdown?.orderCount || 0) + (g.actualBreakdown?.retailVolume || 0);
+      return actual >= target && target > 0;
+    }).length;
+
+    return {
+      memberId,
+      memberName: members.find(m => m.id === memberId)?.name || 'Unknown',
+      annualBreakdownProgress,
+      annualExecutionProgress,
+      monthlyBreakdownProgress,
+      monthlyExecutionProgress,
+      weeklyBreakdownProgress,
+      weeklyExecutionProgress,
+      totalAnnualGoals: memberAnnualGoals.length,
+      completedAnnualGoals: completedAnnual,
+      totalMonthlyGoals: memberMonthlyGoals.length,
+      completedMonthlyGoals: completedMonthly,
+      totalWeeklyGoals: memberWeeklyGoals.length,
+      completedWeeklyGoals: completedWeekly,
+    };
+  }, [annualGoals, monthlyGoals, weeklyGoals, members]);
+
+  // 获取团队统计数据
+  const getTeamStats = useCallback((): TeamStats => {
+    const activeMembers = members.filter(m => m.status === 'active');
+    
+    let totalAnnualBreakdownProgress = 0;
+    let totalAnnualExecutionProgress = 0;
+    let totalMonthlyBreakdownProgress = 0;
+    let totalMonthlyExecutionProgress = 0;
+    
+    activeMembers.forEach(member => {
+      const progress = getMemberProgress(member.id);
+      totalAnnualBreakdownProgress += progress.annualBreakdownProgress;
+      totalAnnualExecutionProgress += progress.annualExecutionProgress;
+      totalMonthlyBreakdownProgress += progress.monthlyBreakdownProgress;
+      totalMonthlyExecutionProgress += progress.monthlyExecutionProgress;
+    });
+
+    const memberCount = activeMembers.length || 1;
+    
+    // 获取表现最好的成员（按年度拆解进度排序）
+    const topPerformers = activeMembers
+      .map(member => {
+        const progress = getMemberProgress(member.id);
+        return {
+          memberId: member.id,
+          memberName: member.name,
+          breakdownProgress: progress.annualBreakdownProgress,
+          executionProgress: progress.annualExecutionProgress,
+        };
+      })
+      .sort((a, b) => b.breakdownProgress - a.breakdownProgress)
+      .slice(0, 3);
+
+    return {
+      totalMembers: members.length,
+      activeMembers: activeMembers.length,
+      totalAnnualGoals: annualGoals.length,
+      totalMonthlyGoals: monthlyGoals.length,
+      totalWeeklyGoals: weeklyGoals.length,
+      avgBreakdownProgress: totalAnnualBreakdownProgress / memberCount,
+      avgExecutionProgress: totalAnnualExecutionProgress / memberCount,
+      avgMonthlyBreakdownProgress: totalMonthlyBreakdownProgress / memberCount,
+      avgMonthlyExecutionProgress: totalMonthlyExecutionProgress / memberCount,
+      topPerformers,
+    };
+  }, [members, annualGoals, monthlyGoals, weeklyGoals, getMemberProgress]);
+
+  // 获取成员的所有目标
+  const getMemberGoals = useCallback((memberId: string) => {
+    return {
+      annual: annualGoals.filter(g => g.memberId === memberId),
+      monthly: monthlyGoals.filter(g => g.memberId === memberId),
+      weekly: weeklyGoals.filter(g => g.memberId === memberId),
+    };
+  }, [annualGoals, monthlyGoals, weeklyGoals]);
+
+  return {
+    members,
+    annualGoals,
+    monthlyGoals,
+    weeklyGoals,
+    isLoading,
+    createMember,
+    updateMember,
+    deleteMember,
+    createAnnualGoal,
+    updateAnnualGoal,
+    deleteAnnualGoal,
+    createMonthlyGoal,
+    updateMonthlyGoal,
+    updateMonthlyGoalActual,
+    createWeeklyGoal,
+    updateWeeklyGoal,
+    updateWeeklyGoalActual,
+    getMemberProgress,
+    getTeamStats,
+    getMemberGoals,
+  };
+}
