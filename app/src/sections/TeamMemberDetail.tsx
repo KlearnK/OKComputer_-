@@ -124,9 +124,51 @@ export const TeamMemberDetail = ({
   };
 
   const handleOpenAnnualActual = (goal: TeamMemberAnnualGoal) => {
-    setSelectedGoal(goal);
-    setModalType('annual');
-    setIsActualModalOpen(true);
+ const modalGoal = {
+    id: goal.id,
+    memberId: goal.memberId,
+    year: goal.year,
+    month: 0,
+    monthISO: `${goal.year}-01`,
+    week: 0,
+    weekISO: `${goal.year}-W01`,
+    weekStartDate: '',
+    weekEndDate: '',
+    breakdownGoals: {
+      income: goal.breakdownGoals?.income ?? 0,
+      level: goal.breakdownGoals?.level ?? '',
+      orderCount: goal.breakdownGoals?.orderCount ?? 0,
+      retailVolume: goal.breakdownGoals?.retailVolume ?? 0,
+      travelGoal: goal.breakdownGoals?.travelGoal ?? '',
+    },
+    executionGoals: {
+      newLeads: goal.executionGoals?.newLeads ?? 0,
+      visitCount: goal.executionGoals?.visitCount ?? 0,
+      new5ALeads: goal.executionGoals?.new5ALeads ?? 0,
+      visit5ACount: goal.executionGoals?.visit5ACount ?? 0,
+      salonInviteCount: goal.executionGoals?.salonInviteCount ?? 0,
+      引流CardCount: goal.executionGoals?.引流CardCount ?? 0,
+    },
+    actualBreakdown: {
+      income: goal.actualBreakdown?.income ?? 0,
+      orderCount: goal.actualBreakdown?.orderCount ?? 0,
+      retailVolume: goal.actualBreakdown?.retailVolume ?? 0,
+    },
+    actualExecution: {
+      newLeads: goal.actualExecution?.newLeads ?? 0,
+      visitCount: goal.actualExecution?.visitCount ?? 0,
+      new5ALeads: goal.actualExecution?.new5ALeads ?? 0,
+      visit5ACount: goal.actualExecution?.visit5ACount ?? 0,
+      salonInviteCount: goal.actualExecution?.salonInviteCount ?? 0,
+      引流CardCount: goal.actualExecution?.引流CardCount ?? 0,
+    },
+    createdAt: goal.createdAt,
+    updatedAt: goal.updatedAt,
+  } as any;
+  
+  setSelectedGoal(modalGoal);
+  setModalType('annual');
+  setIsActualModalOpen(true);
   };
 
   const handleDeleteMonthlyGoal = (id: string) => {

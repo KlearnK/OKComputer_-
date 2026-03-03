@@ -21,6 +21,9 @@ export const ActualUpdateModal = ({
   goal,
   type,
 }: ActualUpdateModalProps) => {
+  // 防止对话框关闭时渲染
+  if (!isOpen) return null;
+  
   const [actualBreakdown, setActualBreakdown] = useState({
     income: '',
     orderCount: '',
@@ -54,6 +57,23 @@ export const ActualUpdateModal = ({
     }
   }, [goal]);
 
+  // 添加空值保护 - 如果 goal 为空，显示错误提示而不是白屏
+  if (!goal) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>错误</DialogTitle>
+          </DialogHeader>
+          <p className="text-slate-600">无法加载目标数据，请关闭后重试。</p>
+          <DialogFooter>
+            <Button onClick={onClose}>关闭</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   const handleSubmit = () => {
     const breakdownData = {
       income: parseInt(actualBreakdown.income) || 0,
@@ -71,8 +91,6 @@ export const ActualUpdateModal = ({
     onSubmit(breakdownData, executionData);
     onClose();
   };
-
-  if (!goal) return null;
 
   const typeLabel = type === 'annual' ? '年度' : type === 'monthly' ? '月度' : '周别';
 
