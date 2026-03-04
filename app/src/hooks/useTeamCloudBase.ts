@@ -85,6 +85,8 @@ export const useTeamCloudBase = (teamCode: string | null) => {
       setIsOnline(true);
       addDebugLog('网络已连接');
       syncOfflineData();
+      // Safari 缓存修复：网络恢复时标记需要刷新
+      sessionStorage.setItem('network_recovered', 'true');
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -220,6 +222,9 @@ export const useTeamCloudBase = (teamCode: string | null) => {
 
       saveToLocalStorage(code, mergedMembers, mergedAnnual, mergedMonthly, mergedWeekly);
 
+      // Safari 缓存修复：记录数据刷新时间戳
+      sessionStorage.setItem(`data_refresh_time_${code}`, Date.now().toString());
+      
       setSyncStatus('synced');
       addDebugLog('云端数据加载完成，已合并到本地');
     } catch (error) {
@@ -234,6 +239,9 @@ export const useTeamCloudBase = (teamCode: string | null) => {
   const setupRealtimeListeners = useCallback((code: string) => {
     addDebugLog('设置实时监听器');
 
+    // Safari 缓存修复：清理旧监听器前清除缓存标记
+    sessionStorage.removeItem(`cache_refresh_${code}`);
+    
     // 清理旧监听器
     listenersRef.current.forEach(listener => listener.close());
     listenersRef.current = [];
@@ -582,8 +590,8 @@ export const useTeamCloudBase = (teamCode: string | null) => {
 
   const updateAnnualGoalActual = useCallback(async (
     id: string, 
-    actualBreakdown: Partial<TeamMemberAnnualGoal['breakdownGoals']>, 
-    actualExecution: Partial<TeamMemberAnnualGoal['executionGoals']>
+    actualBreakdown: any, 
+    actualExecution: any
   ) => {
     const code = teamCodeRef.current;
     if (!code) return;
@@ -985,6 +993,34 @@ export const useTeamCloudBase = (teamCode: string | null) => {
     };
   }, [annualGoals, monthlyGoals, weeklyGoals]);
 
+  // Safari 缓存修复：定期刷新机制（每 5 分钟检查一次数据）
+  useEffect(() => {
+    const code = teamCodeRef.current;
+    if (!code) return;
+    
+    const interval = setInterval(() => {
+      const lastRefreshTime = sessionStorage.getItem(`data_refresh_time_${code}`);
+      const now = Date.now();
+      const fiveMinutesInMs = 5 * 60 * 1000;
+      
+      if (!lastRefreshTime || (now - parseInt(lastRefreshTime)) > fiveMinutesInMs) {
+        addDebugLog('定期数据刷新触发（5分钟周期）');
+        // 触发刷新：清除缓存并重新加载
+        const cacheTimestamp = Date.now();
+        sessionStorage.setItem(`cache_refresh_${code}`, cacheTimestamp.toString());
+        
+        // 强制刷新本地存储数据
+        localStorage.removeItem(`${OFFLINE_MEMBERS_KEY}_${code}`);
+        localStorage.removeItem(`${OFFLINE_ANNUAL_GOALS_KEY}_${code}`);
+        localStorage.removeItem(`${OFFLINE_MONTHLY_GOALS_KEY}_${code}`);
+        localStorage.removeItem(`${OFFLINE_WEEKLY_GOALS_KEY}_${code}`);
+        addDebugLog('已清除本地缓存');
+      }
+    }, 60000); // 每分钟检查一次
+    
+    return () => clearInterval(interval);
+  }, [addDebugLog]);
+
   // ==================== 关键修改：分享链接使用传入的 teamCode ====================
   const getShareLink = useCallback(() => {
     if (!teamCode) return window.location.origin;
@@ -994,7 +1030,19 @@ export const useTeamCloudBase = (teamCode: string | null) => {
   const refreshData = useCallback(async () => {
     const code = teamCodeRef.current;
     if (!code) return;
-    addDebugLog('手动刷新数据');
+    addDebugLog('手动刷新数据 - 清除缓存并重新加载');
+    
+    // Safari 缓存修复：清除浏览器缓存
+    const cacheTimestamp = Date.now();
+    sessionStorage.setItem(`cache_refresh_${code}`, cacheTimestamp.toString());
+    
+    // 强制刷新本地存储数据
+    localStorage.removeItem(`${OFFLINE_MEMBERS_KEY}_${code}`);
+    localStorage.removeItem(`${OFFLINE_ANNUAL_GOALS_KEY}_${code}`);
+    localStorage.removeItem(`${OFFLINE_MONTHLY_GOALS_KEY}_${code}`);
+    localStorage.removeItem(`${OFFLINE_WEEKLY_GOALS_KEY}_${code}`);
+    addDebugLog('已清除本地缓存');
+    
     const localData = loadFromLocalStorage(code);
     await loadCloudData(code, localData);
   }, [addDebugLog, loadFromLocalStorage, loadCloudData]);

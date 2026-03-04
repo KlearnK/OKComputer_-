@@ -273,8 +273,8 @@ export const annualGoalDB = {
   async updateActual(
     teamCode: string, 
     id: string, 
-    actualBreakdown: Partial<TeamMemberAnnualGoal['breakdownGoals']>, 
-    actualExecution: Partial<TeamMemberAnnualGoal['executionGoals']>
+    actualBreakdown: any, 
+    actualExecution: any
   ): Promise<boolean> {
     try {
       const isAuthed = await ensureAuth();

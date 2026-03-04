@@ -3,7 +3,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { AnnualGoalList } from './AnnualGoalList';
 import type { TeamMember, MemberProgress, TeamMemberAnnualGoal } from '@/types/team';
+import type { AnnualGoal } from '@/types/goals';
 import { 
   Users, 
   Phone, 
@@ -15,7 +17,6 @@ import {
   Target,
   ChevronDown,
   ChevronUp,
-  Edit3,
   Plus,
   MessageCircle
 } from 'lucide-react';
@@ -30,6 +31,7 @@ interface TeamMemberListProps {
   onEditGoal: (goal: TeamMemberAnnualGoal) => void;
   onCreateGoal: (memberId: string) => void;
   onDeleteGoal: (id: string) => void | Promise<void>;
+  monthlyGoalsCount?: (annualGoalId: string) => number;
 }
 
 export const TeamMemberList = ({
@@ -42,6 +44,7 @@ export const TeamMemberList = ({
   onEditGoal,
   onCreateGoal,
   onDeleteGoal,
+  monthlyGoalsCount = () => 0,
 }: TeamMemberListProps) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -75,6 +78,7 @@ export const TeamMemberList = ({
       {members.map((member) => {
         const progress = memberProgress[member.id];
         const isExpanded = expandedId === member.id;
+        // ✅ 修复：直接传递原始数据，不做转换
         const memberAnnualGoals = annualGoals.filter(g => g.memberId === member.id);
 
         return (
@@ -243,59 +247,29 @@ export const TeamMemberList = ({
 
               {isExpanded && (
                 <div className="px-5 pb-5 pt-2 bg-slate-50/50 border-t border-slate-100">
-                  {/* 年度目标列表 */}
                   {memberAnnualGoals.length > 0 && (
                     <div className="mb-4">
                       <h4 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
                         <Target className="w-4 h-4 text-indigo-500" />
                         年度目标 ({memberAnnualGoals.length}个)
                       </h4>
-                      <div className="space-y-2">
-                        {memberAnnualGoals.map(goal => (
-                          <div key={goal.id} className="bg-white rounded-lg p-3 shadow-sm flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-slate-800">{goal.year}年目标</p>
-                              <p className="text-xs text-slate-500">
-                                收入: ¥{goal.breakdownGoals.income.toLocaleString()} | 
-                                单量: {goal.breakdownGoals.orderCount} | 
-                                新增名单: {goal.executionGoals.newLeads}
-                              </p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEditGoal(goal);
-                                }}
-                                className="h-7 px-2 text-xs text-indigo-600 hover:text-indigo-700"
-                              >
-                                <Edit3 className="w-3 h-3 mr-1" />
-                                编辑
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  if (window.confirm('确定要删除这个目标吗？此操作将同时删除相关的月度和周目标。')) {
-                                    await onDeleteGoal(goal.id);
-                                  }
-                                }}
-                                className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-3 h-3 mr-1" />
-                                删除
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <AnnualGoalList
+                        key={`${member.id}-${memberAnnualGoals.length}-${Date.now()}`}  // 强制重新渲染
+                        goals={memberAnnualGoals as AnnualGoal[]}
+                        onEdit={(goal) => onEditGoal(goal as TeamMemberAnnualGoal)}
+                        onDelete={onDeleteGoal}
+                        onSelectGoal={() => onSelectMember(member)}
+                        monthlyGoalsCount={monthlyGoalsCount}
+                      />
                     </div>
                   )}
 
-                  {/* 创建新目标按钮 */}
+                  {memberAnnualGoals.length === 0 && (
+                    <div className="mb-4 text-center py-4 text-slate-500 text-sm bg-slate-50 rounded-lg">
+                      暂无年度目标，点击下方按钮创建
+                    </div>
+                  )}
+
                   <Button
                     variant="outline"
                     size="sm"

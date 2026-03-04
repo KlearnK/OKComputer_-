@@ -447,7 +447,14 @@ export const TeamMemberDetail = ({
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                       <div className="bg-green-50 rounded-lg p-3">
                         <span className="text-xs text-green-700 font-medium">收入</span>
-                        <p className="text-lg font-bold text-green-600">¥{goal.breakdownGoals.income.toLocaleString()}</p>
+                        <p className="text-sm font-semibold text-green-600">
+                          计划: ¥{goal.breakdownGoals.income.toLocaleString()}
+                        </p>
+                        {goal.actualBreakdown?.income !== undefined && (
+                          <p className="text-xs text-green-500 mt-1">
+                            实际: ¥{goal.actualBreakdown.income.toLocaleString()}
+                          </p>
+                        )}
                       </div>
                       <div className="bg-amber-50 rounded-lg p-3">
                         <span className="text-xs text-amber-700 font-medium">级别</span>
@@ -455,11 +462,25 @@ export const TeamMemberDetail = ({
                       </div>
                       <div className="bg-blue-50 rounded-lg p-3">
                         <span className="text-xs text-blue-700 font-medium">单量</span>
-                        <p className="text-lg font-bold text-blue-600">{goal.breakdownGoals.orderCount}</p>
+                        <p className="text-sm font-semibold text-blue-600">
+                          计划: {goal.breakdownGoals.orderCount}
+                        </p>
+                        {goal.actualBreakdown?.orderCount !== undefined && (
+                          <p className="text-xs text-blue-500 mt-1">
+                            实际: {goal.actualBreakdown.orderCount}
+                          </p>
+                        )}
                       </div>
                       <div className="bg-purple-50 rounded-lg p-3">
                         <span className="text-xs text-purple-700 font-medium">零售量</span>
-                        <p className="text-lg font-bold text-purple-600">{goal.breakdownGoals.retailVolume}</p>
+                        <p className="text-sm font-semibold text-purple-600">
+                          计划: {goal.breakdownGoals.retailVolume}
+                        </p>
+                        {goal.actualBreakdown?.retailVolume !== undefined && (
+                          <p className="text-xs text-purple-500 mt-1">
+                            实际: {goal.actualBreakdown.retailVolume}
+                          </p>
+                        )}
                       </div>
                       <div className="bg-cyan-50 rounded-lg p-3">
                         <span className="text-xs text-cyan-700 font-medium">旅游</span>
@@ -477,27 +498,69 @@ export const TeamMemberDetail = ({
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       <div className="bg-blue-50 rounded-lg p-3">
                         <span className="text-xs text-blue-700 font-medium">新增名单</span>
-                        <p className="text-lg font-bold text-blue-600">{goal.executionGoals.newLeads}</p>
+                        <p className="text-sm font-semibold text-blue-600">
+                          计划: {goal.executionGoals.newLeads}
+                        </p>
+                        {goal.actualExecution?.newLeads !== undefined && (
+                          <p className="text-xs text-blue-500 mt-1">
+                            实际: {goal.actualExecution.newLeads}
+                          </p>
+                        )}
                       </div>
                       <div className="bg-purple-50 rounded-lg p-3">
                         <span className="text-xs text-purple-700 font-medium">拜访人次</span>
-                        <p className="text-lg font-bold text-purple-600">{goal.executionGoals.visitCount}</p>
+                        <p className="text-sm font-semibold text-purple-600">
+                          计划: {goal.executionGoals.visitCount}
+                        </p>
+                        {goal.actualExecution?.visitCount !== undefined && (
+                          <p className="text-xs text-purple-500 mt-1">
+                            实际: {goal.actualExecution.visitCount}
+                          </p>
+                        )}
                       </div>
                       <div className="bg-amber-50 rounded-lg p-3">
                         <span className="text-xs text-amber-700 font-medium">新增5A名单</span>
-                        <p className="text-lg font-bold text-amber-600">{goal.executionGoals.new5ALeads}</p>
+                        <p className="text-sm font-semibold text-amber-600">
+                          计划: {goal.executionGoals.new5ALeads}
+                        </p>
+                        {goal.actualExecution?.new5ALeads !== undefined && (
+                          <p className="text-xs text-amber-500 mt-1">
+                            实际: {goal.actualExecution.new5ALeads}
+                          </p>
+                        )}
                       </div>
                       <div className="bg-red-50 rounded-lg p-3">
                         <span className="text-xs text-red-700 font-medium">拜访5A人次</span>
-                        <p className="text-lg font-bold text-red-600">{goal.executionGoals.visit5ACount}</p>
+                        <p className="text-sm font-semibold text-red-600">
+                          计划: {goal.executionGoals.visit5ACount}
+                        </p>
+                        {goal.actualExecution?.visit5ACount !== undefined && (
+                          <p className="text-xs text-red-500 mt-1">
+                            实际: {goal.actualExecution.visit5ACount}
+                          </p>
+                        )}
                       </div>
                       <div className="bg-indigo-50 rounded-lg p-3">
                         <span className="text-xs text-indigo-700 font-medium">邀约沙龙</span>
-                        <p className="text-lg font-bold text-indigo-600">{goal.executionGoals.salonInviteCount}</p>
+                        <p className="text-sm font-semibold text-indigo-600">
+                          计划: {goal.executionGoals.salonInviteCount}
+                        </p>
+                        {goal.actualExecution?.salonInviteCount !== undefined && (
+                          <p className="text-xs text-indigo-500 mt-1">
+                            实际: {goal.actualExecution.salonInviteCount}
+                          </p>
+                        )}
                       </div>
                       <div className="bg-cyan-50 rounded-lg p-3">
                         <span className="text-xs text-cyan-700 font-medium">引流卡量</span>
-                        <p className="text-lg font-bold text-cyan-600">{goal.executionGoals.引流CardCount}</p>
+                        <p className="text-sm font-semibold text-cyan-600">
+                          计划: {goal.executionGoals.引流CardCount}
+                        </p>
+                        {goal.actualExecution?.['引流CardCount'] !== undefined && (
+                          <p className="text-xs text-cyan-500 mt-1">
+                            实际: {goal.actualExecution.引流CardCount}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

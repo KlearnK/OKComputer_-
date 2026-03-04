@@ -490,6 +490,7 @@ const handleEditGoal = (goal: TeamMemberAnnualGoal | AnnualGoal) => {
                   onEditGoal={handleEditGoal}
                   onCreateGoal={handleCreateGoal}
                   onDeleteGoal={handleDeleteGoal}
+                  monthlyGoalsCount={(annualGoalId) => monthlyGoals.filter(g => g.annualGoalId === annualGoalId).length}
                 />
               </div>
             </div>
